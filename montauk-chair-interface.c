@@ -11,8 +11,6 @@
 #define PWM_STEP 1000
 // Pwm cycle length. Given in units of PWM_STEP.
 #define PWM_CYCLE 20
-// Pwm cycle 'on' part length. Given in units of PWM_STEP.
-#define PWM_CYCLE_ON 6
 
 struct gpiod_chip* chip;
 struct gpiod_line* line;
@@ -29,9 +27,9 @@ void gpio_init(void) {
         exit(-1);
     }
 
-    if (!gpiod_line_request_output(line, "montauk-chair-interface", 1)) {
+    if (gpiod_line_request_output(line, "montauk-chair-interface", 1) < 0) {
         printf(
-            "Could not set gpio line to output. Error: %s\n", 
+            "Could not set gpio line to output. Error: %s\n",
             strerror(errno)
         );
         exit(-1);
@@ -43,32 +41,34 @@ void gpio_close() {
 }
 
 int main() {
-    //gpio_init();
+    gpio_init();
 
     struct timespec spec;
     unsigned long us;
-    unsigned long usPrevious = 0;
-    int pwmStep = 0;
-    int pinLevel = 1;
+    unsigned long us_previous = 0;
+    int pwm_step = 0;
+    int pin_level = 1;
+    uint pwm_cycle_on = 0;
     while(1) {
         clock_gettime(CLOCK_MONOTONIC, &spec);
         us = 1e6 * spec.tv_sec + spec.tv_nsec / 1e3;
 
-        if (us > usPrevious + PWM_STEP) {
-            usPrevious = us;
-            pwmStep++;
-            printf("%d", pinLevel);
-            if (pwmStep == PWM_CYCLE_ON) {
+        if (us > us_previous + PWM_STEP) {
+            us_previous = us;
+            pwm_step++;
+            printf("%d", pin_level);
+            if (pwm_step == pwm_cycle_on) {
                 // Falling edge
-                pinLevel = 0;
-                //gpiod_line_set_value(line, pinLevel);
+                pin_level = 0;
+                gpiod_line_set_value(line, pin_level);
             }
-            if (pwmStep == PWM_CYCLE) {
+            if (pwm_step == PWM_CYCLE) {
                 // Rising edge
-                pinLevel = 1;
-                pwmStep = 0;
-                //gpiod_line_set_value(line, pinLevel);
+                pin_level = 1;
+                pwm_step = 0;
+                gpiod_line_set_value(line, pin_level);
                 printf("\n");
+                pwm_cycle_on = (pwm_cycle_on+1) % PWM_CYCLE;
             }
         }
     }
