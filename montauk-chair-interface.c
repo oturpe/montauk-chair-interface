@@ -8,15 +8,15 @@
 
 #define GPIO_DEVICE "/dev/gpiochip0"
 #define PIN 12
-#define SND_DEVICE "hw:1,0"
-#define SND_DATA_SIZE 4
+#define SND_DEVICE "hw:2,0"
+#define SND_DATA_SIZE 32
 
 // Pwm step length. Given in units of microsecond.
-#define PWM_STEP 1000
+#define PWM_STEP 100
 // Pwm cycle length. Given in units of PWM_STEP.
-#define PWM_CYCLE 20
+#define PWM_CYCLE 100
 // Highest allowed value for PWM_CYCLE
-#define PWM_CYCLE_ON_MAX 10
+#define PWM_CYCLE_ON_MAX 40
 
 struct gpiod_chip* chip;
 struct gpiod_line* line;
@@ -25,6 +25,8 @@ snd_pcm_t* capture_handle;
 snd_pcm_hw_params_t* hw_params;
 int snd_rate = 44000;
 int16_t* snd_data;
+
+#define UPDATE_RATE 10
 
 
 void gpio_init(void) {
@@ -121,17 +123,23 @@ void snd_init() {
 void get_pwm_cycle_on(uint* pwm_cycle_on) {
     static uint32_t offset = 0;
     int rc = snd_pcm_readi(capture_handle, snd_data + offset, 1);
-    if (rc == -EPIPE) 
+    if (rc == -EPIPE)
     {
         printf("Overrun occurred.\n");
         snd_pcm_prepare(capture_handle);
-    } 
+    }
     else if (rc < 0)
     {
         fprintf(stderr, "error from read: %s\n", snd_strerror(rc));
-    } 
+    }
 
-    uint32_t prev_offset = offset; 
+    static uint32_t update_counter = 0;
+    update_counter = (update_counter + 1) % UPDATE_RATE;
+    if (update_counter > 0) {
+        return;
+    }
+
+    uint32_t prev_offset = offset;
     offset = (offset + 1) % SND_DATA_SIZE;
     if (snd_data[offset] > snd_data[prev_offset]) {
         if (*pwm_cycle_on < PWM_CYCLE_ON_MAX) {
@@ -143,20 +151,17 @@ void get_pwm_cycle_on(uint* pwm_cycle_on) {
             (*pwm_cycle_on)--;
         }
     }
-
-    printf("Debug: (offset: %u, prev_offset: %d, data: %d, prev_data: %d) ", offset, prev_offset, snd_data[offset], snd_data[prev_offset]);
-
 }
 
 int main() {
-    //gpio_init();
+    gpio_init();
     snd_init();
 
     struct timespec spec;
     unsigned long us;
     unsigned long us_previous = 0;
     int pwm_step = 0;
-    int pin_level = 1;
+    int pin_level = 0;
     uint pwm_cycle_on = 0;
     while(1) {
         clock_gettime(CLOCK_MONOTONIC, &spec);
@@ -169,20 +174,21 @@ int main() {
         if (us > us_previous + PWM_STEP) {
             us_previous = us;
             pwm_step = (pwm_step + 1) % PWM_CYCLE;
-            printf("%d", pin_level);
-            if (pwm_step == pwm_cycle_on && pwm_cycle_on > 0) {
-                // Falling edge
-                pin_level = 0;
-                //gpiod_line_set_value(line, pin_level);
-            }
-            else if (pwm_step == 0) {
+            if (pwm_step == 0) {
                 // Rising edge
                 pin_level = 1;
-                //gpiod_line_set_value(line, pin_level);
+                gpiod_line_set_value(line, pin_level);
                 printf("\n");
 
                 get_pwm_cycle_on(&pwm_cycle_on);
             }
+            if (pwm_step == pwm_cycle_on) {
+                // Falling edge
+                pin_level = 0;
+                gpiod_line_set_value(line, pin_level);
+            }
+
+            printf("%d", pin_level);
         }
 
     }
