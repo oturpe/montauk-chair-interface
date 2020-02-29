@@ -8,7 +8,11 @@
 
 #define GPIO_DEVICE "/dev/gpiochip0"
 #define PIN 12
-#define SND_DEVICE "hw:2,0"
+// May be any of these
+#define SND_DEVICE_0 "hw:0,0"
+#define SND_DEVICE_1 "hw:1,0"
+#define SND_DEVICE_2 "hw:2,0"
+
 #define SND_DATA_SIZE 32
 
 // Pwm step length. Given in units of microsecond.
@@ -57,10 +61,18 @@ void gpio_close() {
 void snd_init() {
     int err;
 
-    if ((err = snd_pcm_open(&capture_handle, SND_DEVICE, SND_PCM_STREAM_CAPTURE, 0)) < 0) {
-        printf("Could not open audio device. Error: %s\n", snd_strerror(err));
-        exit(1);
+    if ((err = snd_pcm_open(&capture_handle, SND_DEVICE_0, SND_PCM_STREAM_CAPTURE, 0)) < 0) {
+        printf("Could not open audio device 0. Error: %s\n", snd_strerror(err));
+        if ((err = snd_pcm_open(&capture_handle, SND_DEVICE_1, SND_PCM_STREAM_CAPTURE, 0)) < 0) {
+            printf("Could not open audio device 1. Error: %s\n", snd_strerror(err));
+            if ((err = snd_pcm_open(&capture_handle, SND_DEVICE_2, SND_PCM_STREAM_CAPTURE, 0)) < 0) {
+                printf("Could not open audio device 2. Error: %s\n", snd_strerror(err));
+                printf("Could not open any audio device.\n");
+                exit(1);
+            }
+        }
     }
+    printf("Audio device opened.\n");
 
     if ((err = snd_pcm_hw_params_malloc(&hw_params)) <0) {
         printf(
