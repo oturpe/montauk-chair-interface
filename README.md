@@ -25,7 +25,7 @@ Raspberry Pin konfigurointi
 
 6. Asenna tarvittavat ohjelmat:
 
-   `dnf install git`
+   `dnf install git make gcc`
 
 Kääntäminen
 1. Kloonaa repositorio
