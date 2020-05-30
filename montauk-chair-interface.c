@@ -12,14 +12,14 @@
 #define SND_DEVICE_0 "hw:0,0"
 #define SND_DEVICE_1 "hw:1,0"
 #define SND_DEVICE_2 "hw:2,0"
-
+#define LOG_FILE "/root/montauk-chair-interface.log"
 #define SND_DATA_SIZE 32
 
 // Pwm step length. Given in units of microsecond.
 #define PWM_STEP 100
 // Pwm cycle length. Given in units of PWM_STEP.
 #define PWM_CYCLE 100
-// Highest allowed value for PWM_CYCLE
+// Highest allowed value for pwm_cycle_on
 #define PWM_CYCLE_ON_MAX 40
 
 struct gpiod_chip* chip;
@@ -32,21 +32,31 @@ int16_t* snd_data;
 
 #define UPDATE_RATE 10
 
+// Log file descriptor
+int log_fd;
+
+void log_init() {
+    if (log_fd = open(LOG_FILE, O_CREAT|O_WRONLY, S_IRWXU) < 0) {
+        // Cannot log anything, opening log file failed.
+        exit(1);
+    }
+}
 
 void gpio_init(void) {
     chip = gpiod_chip_open(GPIO_DEVICE);
     if (!chip) {
-        printf("Could not open gpio chip. Error: %s\n", strerror(errno));
+        dprintf(log_fd, "Could not open gpio chip. Error: %s\n", strerror(errno));
         exit(1);
     }
     line = gpiod_chip_get_line(chip, PIN);
     if (!line) {
-        printf("Could not open gpio line. Error: %s\n", strerror(errno));
+        dprintf(log_fd, "Could not open gpio line. Error: %s\n", strerror(errno));
         exit(1);
     }
 
     if (gpiod_line_request_output(line, "montauk-chair-interface", 1) < 0) {
-        printf(
+        dprintf(
+            log_fd, 
             "Could not set gpio line to output. Error: %s\n",
             strerror(errno)
         );
@@ -61,21 +71,28 @@ void gpio_close() {
 void snd_init() {
     int err;
 
-    if ((err = snd_pcm_open(&capture_handle, SND_DEVICE_0, SND_PCM_STREAM_CAPTURE, 0)) < 0) {
-        printf("Could not open audio device 0. Error: %s\n", snd_strerror(err));
-        if ((err = snd_pcm_open(&capture_handle, SND_DEVICE_1, SND_PCM_STREAM_CAPTURE, 0)) < 0) {
-            printf("Could not open audio device 1. Error: %s\n", snd_strerror(err));
-            if ((err = snd_pcm_open(&capture_handle, SND_DEVICE_2, SND_PCM_STREAM_CAPTURE, 0)) < 0) {
-                printf("Could not open audio device 2. Error: %s\n", snd_strerror(err));
-                printf("Could not open any audio device.\n");
-                exit(1);
-            }
-        }
+    printf("Attempting audio device 0.\n");
+    err = snd_pcm_open(&capture_handle, SND_DEVICE_0, SND_PCM_STREAM_CAPTURE, 0);
+    if (err < 0) {
+        dprintf(log_fd, "Could not open audio device 0. Error: %s\n", snd_strerror(err));
+        dprintf(log_fd, "Attempting audio device 1.\n");
+        err = snd_pcm_open(&capture_handle, SND_DEVICE_1, SND_PCM_STREAM_CAPTURE, 0);
+    }
+    if (err < 0) {
+        dprintf(log_fd, "Could not open audio device 1. Error: %s\n", snd_strerror(err));
+        dprintf(log_fd, "Attempting audio device 2.\n");
+        err = snd_pcm_open(&capture_handle, SND_DEVICE_2, SND_PCM_STREAM_CAPTURE, 0);
+    }
+    if (err < 0) {
+        dprintf(log_fd, "Could not open audio device 2. Error: %s\n", snd_strerror(err));
+        dprintf(log_fd, "Could not open any audio device.\n");
+        exit(1);
     }
     printf("Audio device opened.\n");
 
-    if ((err = snd_pcm_hw_params_malloc(&hw_params)) <0) {
-        printf(
+    if ((err = snd_pcm_hw_params_malloc(&hw_params)) < 0) {
+        dprintf(
+            log_fd, 
             "Could not allocate hw parameters. Error: %s\n",
             snd_strerror(err)
         );
@@ -83,7 +100,8 @@ void snd_init() {
     }
 
     if ((err = snd_pcm_hw_params_any(capture_handle, hw_params)) < 0) {
-        printf(
+        dprintf(
+            log_fd, 
             "Could not initialize hw parameters. Error: %s\n",
             snd_strerror(err)
         );
@@ -91,17 +109,26 @@ void snd_init() {
     }
 
     if ((err = snd_pcm_hw_params_set_access(capture_handle, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0) {
-        printf("Could not set access type. Error: %s\n", snd_strerror(err));
+        dprintf(
+            log_fd,
+            "Could not set access type. Error: %s\n",
+            snd_strerror(err)
+        );
         exit(1);
     }
 
     if ((err = snd_pcm_hw_params_set_format(capture_handle, hw_params, SND_PCM_FORMAT_S16_LE)) < 0) {
-        printf("Could not set sample format. Error: %s\n", snd_strerror(err));
+        dprintf(
+            log_fd,
+            "Could not set sample format. Error: %s\n",
+            snd_strerror(err)
+        );
         exit(1);
     }
 
     if ((err = snd_pcm_hw_params_set_rate_near(capture_handle, hw_params, &snd_rate, 0)) < 0) {
-        printf (
+        dprintf(
+            log_fd, 
             "Could not set sample rate. Error: %s\n",
             snd_strerror(err)
         );
@@ -110,19 +137,28 @@ void snd_init() {
     printf("Rate set at %d\n", snd_rate);
 
     if ((err = snd_pcm_hw_params_set_channels(capture_handle, hw_params, 1)) < 0) {
-        printf("Could not set channel count. Error: %s\n", snd_strerror(err));
+        dprintf(
+            log_fd,
+            "Could not set channel count. Error: %s\n",
+            snd_strerror(err)
+        );
         exit(1);
     }
 
     if ((err = snd_pcm_hw_params(capture_handle, hw_params)) < 0) {
-        printf("Could not set parameters. Error: %s\n", snd_strerror(err));
+        dprintf(
+            log_fd,
+            "Could not set parameters. Error: %s\n",
+            snd_strerror(err)
+        );
         exit(1);
     }
 
     snd_pcm_hw_params_free(hw_params);
 
     if ((err = snd_pcm_prepare(capture_handle)) < 0) {
-        printf(
+        dprintf(
+            log_fd, 
             "Could not prepare audio interface for use. Error: %s\n",
             snd_strerror(err)
         );
@@ -137,12 +173,12 @@ void get_pwm_cycle_on(uint* pwm_cycle_on) {
     int rc = snd_pcm_readi(capture_handle, snd_data + offset, 1);
     if (rc == -EPIPE)
     {
-        printf("Overrun occurred.\n");
+        dprintf(log_fd, "Overrun occurred.\n");
         snd_pcm_prepare(capture_handle);
     }
     else if (rc < 0)
     {
-        fprintf(stderr, "error from read: %s\n", snd_strerror(rc));
+        dprintf(log_fd, "error from read: %s\n", snd_strerror(rc));
     }
 
     static uint32_t update_counter = 0;
@@ -166,6 +202,7 @@ void get_pwm_cycle_on(uint* pwm_cycle_on) {
 }
 
 int main() {
+    log_init();
     gpio_init();
     snd_init();
 
@@ -175,6 +212,10 @@ int main() {
     int pwm_step = 0;
     int pin_level = 0;
     uint pwm_cycle_on = 0;
+    // Constant width null terminated string, content added inside the pwm loop
+    char log_entry[PWM_CYCLE + 1];
+    log_entry[PWM_CYCLE] = '\0';
+ 
     while(1) {
         clock_gettime(CLOCK_MONOTONIC, &spec);
         us = 1e6 * spec.tv_sec + spec.tv_nsec / 1e3;
@@ -190,7 +231,9 @@ int main() {
                 // Rising edge
                 pin_level = 1;
                 gpiod_line_set_value(line, pin_level);
-                printf("\n");
+                
+                //printf("\n");
+                dprintf(log_fd, "%s\n", log_entry);
 
                 get_pwm_cycle_on(&pwm_cycle_on);
             }
@@ -200,7 +243,7 @@ int main() {
                 gpiod_line_set_value(line, pin_level);
             }
 
-            printf("%d", pin_level);
+            log_entry[pwm_step] = pin_level ? '#' : '.';
         }
 
     }
