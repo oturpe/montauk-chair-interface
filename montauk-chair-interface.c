@@ -12,7 +12,7 @@
 #define SND_DEVICE_0 "hw:0,0"
 #define SND_DEVICE_1 "hw:1,0"
 #define SND_DEVICE_2 "hw:2,0"
-#define LOG_FILE "/root/montauk-chair-interface.log"
+#define LOG_FILE "montauk-chair-interface.log"
 #define SND_DATA_SIZE 32
 
 // Pwm step length. Given in units of microsecond.
@@ -36,8 +36,8 @@ int16_t* snd_data;
 int log_fd;
 
 void log_init() {
-    if (log_fd = open(LOG_FILE, O_CREAT|O_WRONLY, S_IRWXU) < 0) {
-        // Cannot log anything, opening log file failed.
+    if ((log_fd = open(LOG_FILE, O_CREAT|O_WRONLY, S_IRWXU)) < 0) {
+        // Opening log file failed. Cannot even log an error.
         exit(1);
     }
 }
@@ -215,7 +215,7 @@ int main() {
     // Constant width null terminated string, content added inside the pwm loop
     char log_entry[PWM_CYCLE + 1];
     log_entry[PWM_CYCLE] = '\0';
- 
+
     while(1) {
         clock_gettime(CLOCK_MONOTONIC, &spec);
         us = 1e6 * spec.tv_sec + spec.tv_nsec / 1e3;
@@ -231,8 +231,7 @@ int main() {
                 // Rising edge
                 pin_level = 1;
                 gpiod_line_set_value(line, pin_level);
-                
-                //printf("\n");
+
                 dprintf(log_fd, "%s\n", log_entry);
 
                 get_pwm_cycle_on(&pwm_cycle_on);
