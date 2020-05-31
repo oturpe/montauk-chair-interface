@@ -35,12 +35,12 @@ Kääntäminen
     cd montauk-chair-interface
     ```
 
-2. Käännä ohjelma
-
-    `make`
-
-3. Asenna ohjelma
+2. Asenna ohjelma
 
     `./install.sh`
 
 Tämän jälkeen ohjelma käynnistyy seuraavan uudelleenkäynnistyksen yhteydessä.
+
+Ohjelman voi myös käynnistää suoraan asennuksen jälkeen:
+
+    `systemctl start montauk-chair-interface.service`

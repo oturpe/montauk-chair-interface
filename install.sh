@@ -1,6 +1,9 @@
 echo "Asennetaan riippuvuudet."
 dnf --assumeyes install make gcc alsa-lib-devel libgpiod-devel
 
+echo "Käännetään ohjelma."
+make
+
 echo "Asennetaan ohjelma."
 mkdir -p /opt/montauk-chair-interface/bin
 mkdir /opt/montauk-chair-interface/log
