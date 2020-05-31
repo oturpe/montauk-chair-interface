@@ -70,7 +70,7 @@ void log_write(char* format, ...) {
 
     va_list vargs;
     va_start(vargs, format);
-    dprintf(log_fd, format, vargs);
+    vdprintf(log_fd, format, vargs);
     va_end(vargs);
 }
 
@@ -102,7 +102,7 @@ void gpio_close() {
 void snd_init() {
     int err;
 
-    printf("Attempting audio device 0.\n");
+    log_write("Attempting audio device 0.\n");
     err = snd_pcm_open(&capture_handle, SND_DEVICE_0, SND_PCM_STREAM_CAPTURE, 0);
     if (err < 0) {
         log_write("Could not open audio device 0. Error: %s\n", snd_strerror(err));
@@ -119,7 +119,7 @@ void snd_init() {
         log_write("Could not open any audio device.\n");
         exit(1);
     }
-    printf("Audio device opened.\n");
+    log_write("Audio device opened.\n");
 
     if ((err = snd_pcm_hw_params_malloc(&hw_params)) < 0) {
         log_write(
@@ -151,7 +151,7 @@ void snd_init() {
         log_write("Could not set sample rate. Error: %s\n", snd_strerror(err));
         exit (1);
     }
-    printf("Rate set at %d\n", snd_rate);
+    log_write("Rate set at %d\n", snd_rate);
 
     if ((err = snd_pcm_hw_params_set_channels(capture_handle, hw_params, 1)) < 0) {
         log_write("Could not set channel count. Error: %s\n", snd_strerror(err));
