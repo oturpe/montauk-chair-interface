@@ -3,7 +3,7 @@ Description=Montauk chair interface
 After=multi-user.target
 
 [Service]
-ExecStart=/root/montauk-chair-interface/montauk-chair-interface
+ExecStart=/opt/montauk-chair-interface/bin/montauk-chair-interface
 
 [Install]
 WantedBy=multi-user.target

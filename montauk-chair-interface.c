@@ -21,7 +21,7 @@
 // Highest allowed value for pwm_cycle_on
 #define PWM_CYCLE_ON_MAX 40
 
-#define LOG_FILE "/root/montauk-chair-interface/montauk-chair-interface.log"
+#define LOG_FILE "/opt/montauk-chair-interface/log/montauk-chair-interface.log"
 #define LOG_MAX_ROWS (100 * 1000)
 
 struct gpiod_chip* chip;
@@ -39,7 +39,7 @@ int log_fd;
 uint log_row_index = 0;
 
 void log_init() {
-    if ((log_fd = open(LOG_FILE, O_CREAT|O_TRUNC|O_WRONLY, S_IRWXU)) < 0) {
+    if ((log_fd = open(LOG_FILE, O_CREAT|O_TRUNC|O_WRONLY, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP)) < 0) {
         // Opening log file failed. Cannot even log an error.
         exit(1);
     }
