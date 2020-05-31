@@ -21,7 +21,7 @@
 // Highest allowed value for pwm_cycle_on
 #define PWM_CYCLE_ON_MAX 40
 
-#define LOG_FILE "/opt/montauk-chair-interface/log/montauk-chair-interface.log"
+#define LOG_FILE "/var/opt/montauk-chair-interface/montauk-chair-interface.log"
 #define LOG_MAX_ROWS (100 * 1000)
 
 struct gpiod_chip* chip;
