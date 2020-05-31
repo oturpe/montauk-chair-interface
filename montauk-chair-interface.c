@@ -39,7 +39,7 @@ int log_fd;
 uint log_row_index = 0;
 
 void log_init() {
-    if ((log_fd = open(LOG_FILE, O_CREAT|O_WRONLY, S_IRWXU)) < 0) {
+    if ((log_fd = open(LOG_FILE, O_CREAT|O_TRUNC|O_WRONLY, S_IRWXU)) < 0) {
         // Opening log file failed. Cannot even log an error.
         exit(1);
     }
