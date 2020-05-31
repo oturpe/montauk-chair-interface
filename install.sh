@@ -6,7 +6,7 @@ make
 
 echo "Asennetaan ohjelma."
 mkdir -p /opt/montauk-chair-interface/bin
-mkdir /opt/montauk-chair-interface/log
+mkdir -p /opt/montauk-chair-interface/log
 cp montauk-chair-interface /opt/montauk-chair-interface/bin
 
 echo "Konfiguroidaan systemd."
