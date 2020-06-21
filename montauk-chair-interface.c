@@ -69,9 +69,13 @@ void log_write(char* format, ...) {
     }
 
     va_list vargs;
+    va_list vargs2;
     va_start(vargs, format);
+    va_copy(vargs2, vargs);
     vdprintf(log_fd, format, vargs);
+    vprintf(format, vargs2);
     va_end(vargs);
+    va_end(vargs2);
 }
 
 void gpio_init(void) {

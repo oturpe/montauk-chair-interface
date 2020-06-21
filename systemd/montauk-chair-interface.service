@@ -1,9 +1,14 @@
 [Unit]
 Description=Montauk chair interface
-After=multi-user.target
+After=getty.target
+Conflicts=getty@tty1.service
 
 [Service]
 ExecStart=/opt/montauk-chair-interface/bin/montauk-chair-interface
+TTYPath=/dev/tty1
+StandardInput=tty-force
+TTYReset=yes
+TTYVHangup=yes
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
